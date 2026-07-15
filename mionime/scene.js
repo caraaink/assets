@@ -1,28 +1,52 @@
 // ================== GOOGLE LENS CACHE ==================
-let googleLensCache = null;        // Simpan hasil HTML Google Lens
-let currentSearchImageUrl = null;  // Simpan imageUrl yang sedang digunakan
-// ======================================================
+let googleLensCache = null;
+let currentSearchImageUrl = null;
+const moreInfoCache = new Map();
+
+// Helper untuk Mencegah Double Click / Disable Tombol
+function setBtnLoadingState(isLoading, text = "Cari") {
+  const btn = document.getElementById('search-anime-btn');
+  const fileInput = document.getElementById('file-short-anime');
+  const fileLabel = document.querySelector('.scene-upload-icon');
+  
+  if (btn) {
+    btn.disabled = isLoading;
+    if (isLoading) {
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Mencari...`;
+    } else {
+      btn.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> ${text}`;
+    }
+  }
+  if (fileInput) fileInput.disabled = isLoading;
+  if (fileLabel) fileLabel.style.pointerEvents = isLoading ? "none" : "auto";
+}
+
+function formatTime(seconds) {
+  const date = new Date(null);
+  date.setSeconds(Math.floor(seconds));
+  return date.toISOString().substr(11, 8);
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 async function fetchGoogleLens(imageUrl) {
   const lensSection = document.getElementById('google-lens-section');
   const lensContainer = document.getElementById('lens-results');
+  if (!lensSection || !lensContainer) return;
 
   lensSection.style.display = 'block';
-  lensContainer.innerHTML = '<div style="padding:10px; color:#888; font-size:13px;">Memuat gambar serupa...</div>';
+  lensContainer.innerHTML = '<div style="padding:10px; color:var(--text-muted); font-size:13px;"><i class="fa-solid fa-spinner fa-spin"></i> Memuat gambar serupa...</div>';
 
+  const SEARCH_URL = atob("aHR0cHM6Ly9hcGkubWVvd25pbWUubmV0L3NlYXJjaA==");
   try {
-    // Kirim ke endpoint utama dengan body JSON
-    const response = await fetch("https://dev-mionime.wapka.top/api/external", {
+    const response = await fetch(SEARCH_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        service: 'lens',
-        imageUrl: imageUrl
-      })
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `imageUrl=${encodeURIComponent(imageUrl)}`
     });
-
     const html = await response.text();
-
     if (html && html.trim() !== '') {
       lensContainer.innerHTML = html;
       googleLensCache = html;
@@ -37,7 +61,6 @@ async function fetchGoogleLens(imageUrl) {
   }
 }
 
-// Fungsi ketika user klik gambar dari Google Lens
 async function useLensImage(selectedImageUrl) {
   const resultBox = document.getElementById('search-result-box');
   const resultList = document.getElementById('result-list');
@@ -46,35 +69,23 @@ async function useLensImage(selectedImageUrl) {
   const lensResults = document.getElementById('lens-results');
 
   if (!resultBox || !resultList) return;
-
-  // Simpan HTML Lens supaya tidak hilang
   const oldLensHTML = lensResults ? lensResults.innerHTML : '';
 
-  // Reset detail sepenuhnya
   detailContent.innerHTML = '';
   detailContent.style.display = 'none';
-
-  // Kembalikan tampilan mobile ke mode list
   resultList.style.display = 'block';
-
-  // Tampilkan loading
   resultList.innerHTML = `
-    <div style="padding:40px 20px; text-align:center; color:#555;">
-      <div class="more-info-loading" style="margin:0 auto; width:60px; height:60px;">
+    <div style="padding:40px 20px; text-align:center; color:var(--text-muted);">
+      <div class="more-info-loading" style="margin:0 auto; width:50px; height:50px;">
         <div class="spinner"></div>
       </div>
-      <p style="margin-top:15px;">Mencari anime dengan gambar dari Google Lens...</p>
+      <p style="margin-top:15px; font-size:13px;">Mencari anime dari gambar terpilih...</p>
     </div>
   `;
 
   resultBox.style.display = 'block';
-  resultBox.style.maxWidth = window.innerWidth <= 600 ? '500px' : '1100px';
-
   try {
-    // Jalankan pencarian ulang
     await performSearch(null, selectedImageUrl);
-
-    // Setelah search selesai, pastikan Lens tetap muncul
     if (oldLensHTML && lensSection && lensResults) {
       setTimeout(() => {
         lensSection.style.display = 'block';
@@ -82,118 +93,48 @@ async function useLensImage(selectedImageUrl) {
       }, 400);
     }
   } catch (err) {
-    console.error('Lens search failed:', err);
-    resultList.innerHTML = `<p style="color:red; padding:20px; text-align:center;">Gagal melakukan pencarian.<br>${err.message}</p>`;
+    resultList.innerHTML = `<p style="color:var(--primary); padding:20px; text-align:center;">Gagal melakukan pencarian.<br>${err.message}</p>`;
   }
 }
 
-
-// Cache for storing fetched moreInfo data
-const moreInfoCache = new Map();
-
-// Dynamic API base URL
-const apiBaseUrl = window.location.origin;
-
-// Fungsi untuk konversi detik ke HH:MM:SS
-function formatTime(seconds) {
-  const date = new Date(null);
-  date.setSeconds(Math.floor(seconds));
-  return date.toISOString().substr(11, 8);
-}
-
-// Fungsi untuk delay (digunakan untuk retry)
-function delay(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 async function fetchMoreInfo(anilistId, retries = 2, backoff = 1000) {
-  console.log('Fetching more info for AniList ID:', anilistId, 'Retries left:', retries);
   const query = `
     query ($id: Int) {
       Media(id: $id, type: ANIME) {
-        trailer {
-          id
-          site
-          thumbnail
-        }
+        trailer { id site thumbnail }
         staff(sort: RELEVANCE, page: 1, perPage: 5) {
-          edges {
-            role
-            node {
-              name {
-                full
-              }
-              image {
-                medium
-              }
-            }
-          }
+          edges { role node { name { full } image { medium } } }
         }
-        favourites
-        popularity
-        meanScore
-        averageScore
-        season
-        seasonYear
-        description(asHtml: false)
+        favourites popularity meanScore averageScore season seasonYear description(asHtml: false)
         characters(sort: FAVOURITES_DESC, page: 1, perPage: 5) {
           edges {
-            node {
-              name {
-                full
-              }
-              image {
-                medium
-              }
-            }
-            voiceActors(language: JAPANESE) {
-              name {
-                full
-              }
-              image {
-                medium
-              }
-            }
+            node { name { full } image { medium } }
+            voiceActors(language: JAPANESE) { name { full } image { medium } }
           }
         }
       }
     }
   `;
   const variables = { id: parseInt(anilistId) };
-
   try {
-    const response = await fetch("https://dev-mionime.wapka.top/api/external", {
+    const response = await fetch(atob("aHR0cHM6Ly9hcGkubWVvd25pbWUubmV0L2FwaS9hbmlsaXN0"), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      // Masukkan parameter service ke dalam payload GraphQL
-      body: JSON.stringify({ 
-        service: "anilist",
-        query: query, 
-        variables: variables 
-      })
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({ query, variables })
     });
-
     if (!response.ok) {
       if (response.status === 429 && retries > 0) {
-        console.warn(`Rate limit hit for AniList ID ${anilistId}, retrying after ${backoff}ms...`);
         await delay(backoff);
         return fetchMoreInfo(anilistId, retries - 1, backoff * 2);
       }
       throw new Error(`AniList API error: ${response.status}`);
     }
-
     const data = await response.json();
-    console.log('AniList Response:', data);
     if (data.errors) throw new Error(data.errors[0].message);
     moreInfoCache.set(anilistId.toString(), data.data.Media);
     return data.data.Media;
   } catch (error) {
-    console.error('More info fetch error for ID', anilistId, ':', error.message);
     if (retries > 0) {
-      console.warn(`Retrying fetchMoreInfo for ID ${anilistId}, retries left: ${retries}`);
       await delay(backoff);
       return fetchMoreInfo(anilistId, retries - 1, backoff * 2);
     }
@@ -202,35 +143,32 @@ async function fetchMoreInfo(anilistId, retries = 2, backoff = 1000) {
 }
 
 async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, isMoreInfoFetch = false) {
-  console.log('showDetail called with id:', id, 'videoUrl:', videoUrl, 'imageUrl:', imageUrl, 'isMoreInfoFetch:', isMoreInfoFetch);
   const detailContent = document.getElementById('detail-content');
   const searchResultBox = document.getElementById('search-result-box');
   const resultList = document.getElementById('result-list');
   const lensSection = document.getElementById('google-lens-section');
   
   if (!detailContent) return;
-  if (lensSection) {
-      lensSection.style.display = 'none';   // Sembunyikan Google Lens saat buka detail
-    }
+  if (lensSection) lensSection.style.display = 'none';
+
   const title = anilist.title || {};
   const coverImage = anilist.coverImage ? anilist.coverImage.large : 'https://via.placeholder.com/100?text=Poster';
 
-  // Highlight selected item
   document.querySelectorAll('.result-item').forEach(item => item.classList.remove('active'));
-  const selectedItem = document.getElementById('result-' + id);
+  const selectedItem = document.querySelector(`.result-item[data-id="${id}"]`);
   if (selectedItem) selectedItem.classList.add('active');
 
   let moreInfo = moreInfoCache.get(anilist.id.toString()) || anilist.moreInfo || null;
   let moreInfoHTML = '';
 
   if (!moreInfo) {
-    moreInfoHTML = `<div class="more-info-trigger" data-anilist-id="${anilist.id}">Lihat Info Selengkapnya</div>`;
+    moreInfoHTML = `<div class="more-info-trigger" data-anilist-id="${anilist.id}"><i class="fa-solid fa-circle-info"></i> Lihat Info & Karakter Selengkapnya</div>`;
   } else {
     const trailer = moreInfo.trailer;
     const trailerHTML = trailer && trailer.site === 'youtube' && trailer.id && trailer.thumbnail
-      ? `<div id="more-info-content"><p><strong>Trailer:</strong></p><div class="trailer-link clickable" data-trailer="https://www.youtube.com/embed/${trailer.id}">
+      ? `<p><strong>Trailer:</strong></p><div class="trailer-link clickable" data-trailer="https://www.youtube.com/embed/${trailer.id}">
            <img src="${trailer.thumbnail}" alt="Trailer" loading="lazy">
-           <span class="play-icon">▶︎</span>
+           <span class="play-icon"><i class="fa-solid fa-play"></i></span>
          </div>`
       : '<p><strong>Trailer:</strong> Tidak ada trailer tersedia.</p>';
 
@@ -242,8 +180,7 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
           const vaImage = edge.voiceActors[0]?.image?.medium || 'https://via.placeholder.com/50?text=No+Image';
           return `<p>
             <img src="${characterImage}" alt="${characterName}" loading="lazy" class="clickable" data-fullsize="${characterImage}">
-            <strong>${characterName}</strong>
-            <span><img src="${vaImage}" alt="${voiceActor}" loading="lazy" class="clickable" data-fullsize="${vaImage}"> ${voiceActor}</span>
+            <span style="font-size:12px;"><b>${characterName}</b><br><small style="color:var(--text-muted);"><i class="fa-solid fa-microphone"></i> ${voiceActor}</small></span>
           </p>`;
         }).join('')
       : '<p>Tidak ada data karakter tersedia.</p>';
@@ -254,17 +191,15 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
           const staffRole = edge.role || 'Tidak diketahui';
           const staffImage = edge.node.image?.medium || null;
           return staffImage
-            ? `<p><img src="${staffImage}" alt="${staffName}" loading="lazy" class="clickable" data-fullsize="${staffImage}"> <strong>${staffRole}</strong>: ${staffName}</p>`
+            ? `<p><img src="${staffImage}" alt="${staffName}" loading="lazy" class="clickable" data-fullsize="${staffImage}"> <span style="font-size:12px;"><b>${staffRole}</b><br><small style="color:var(--text-muted);">${staffName}</small></span></p>`
             : `<p><strong>${staffRole}</strong>: ${staffName}</p>`;
         }).join('')
       : '<p>Tidak ada data staf tersedia.</p>';
 
     moreInfoHTML = `
       ${trailerHTML}
-      <p><strong>Favorit:</strong> ${moreInfo.favourites || 'Tidak diketahui'}</p>
-      <p><strong>Popularitas:</strong> ${moreInfo.popularity || 'Tidak diketahui'}</p>
-      <p><strong>Skor Rata-rata:</strong> ${moreInfo.meanScore || 'Tidak diketahui'}/100</p>
-      <p><strong>Musim:</strong> ${moreInfo.season && moreInfo.seasonYear ? `${moreInfo.season} ${moreInfo.seasonYear}` : 'Tidak diketahui'}</p>
+      <p><strong>Skor Rata-rata:</strong> <span style="color:#eab308;font-weight:bold;"><i class="fa-solid fa-star"></i> ${moreInfo.meanScore || '?'}/100</span></p>
+      <p><strong>Musim:</strong> ${moreInfo.season && moreInfo.seasonYear ? `${moreInfo.season} ${moreInfo.seasonYear}` : '-'}</p>
       <p><strong>Sinopsis:</strong></p>
       <div class="synopsis">${moreInfo.description || 'Tidak ada sinopsis tersedia.'}</div>
       <p><strong>Pemeran Karakter:</strong></p>
@@ -276,143 +211,114 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
 
   detailContent.innerHTML = `
     <div class="detail-section">
-      <span class="detail-close" onclick="closeDetail()">✕</span>
+      <button class="detail-close" onclick="closeDetail()" title="Tutup Detail">✕</button>
       <div class="video-preview">
         ${videoUrl ? `
           <div class="video-wrapper">
             <div class="detail-preview ${videoUrl ? 'clickable' : ''}">
               <img src="${imageUrl || 'https://via.placeholder.com/300x169?text=Video'}" alt="preview" data-original="${videoUrl}">
-              ${videoUrl ? '<span class="play-icon">▶︎</span>' : ''}
+              ${videoUrl ? '<span class="play-icon"><i class="fa-solid fa-play"></i></span>' : ''}
             </div>
           </div>
-        ` : '<p>Tidak ada video preview.</p>'}
+        ` : '<p style="color:var(--text-muted); font-size:12px;">Tidak ada video preview.</p>'}
 
-        <button id="tonton-full" class="tonton-btn">Tonton Full Episode</button>
+        <button id="tonton-full" class="p-btn p-btn-manage" style="width:100%; margin-top:10px; font-size:12px; padding:8px;"><i class="fa-solid fa-circle-play"></i> Tonton Full Episode di Mionime</button>
       </div>
-      <p class="filename-small">Filename: ${filename || 'Tidak diketahui'} | Waktu Scene: ${formatTime(from)} - ${formatTime(to)}</p>
+      <div class="filename-small"><i class="fa-solid fa-file-video"></i> ${filename || 'Unknown'} | <i class="fa-solid fa-stopwatch"></i> ${formatTime(from)} - ${formatTime(to)}</div>
 
-      <hr>
       <div class="full-info">
         <img class="poster clickable" src="${coverImage}" alt="Poster" data-fullsize="${coverImage}">
-        <p><strong>Judul Jepang:</strong> ${title.native || 'Tidak diketahui'}</p>
-        <p><strong>Judul Romaji:</strong> ${title.romaji || 'Tidak diketahui'}</p>
-        <p><strong>Judul Inggris:</strong> ${title.english || 'Tidak diketahui'}</p>
-        <p><strong>Alias:</strong> ${anilist.synonyms ? anilist.synonyms.join(', ') : 'Tidak ada'}</p>
-        <p><strong>Is Adult:</strong> ${anilist.isAdult ? 'Ya' : 'Tidak'}</p>
-        <p><strong>Genre:</strong> ${anilist.genres ? anilist.genres.join(', ') : 'Tidak diketahui'}</p>
-        <p><strong>Format:</strong> ${anilist.format || 'Tidak diketahui'}</p>
-        <p><strong>Status:</strong> ${anilist.status || 'Tidak diketahui'}</p>
-        <p><strong>Total Episodes:</strong> ${anilist.episodes || 'Tidak diketahui'}</p>
-        <p><strong>Durasi per Episode:</strong> ${anilist.duration ? `${anilist.duration} menit` : 'Tidak diketahui'}</p>
-        <p><strong>Tanggal Mulai:</strong> ${anilist.startDate ? `${anilist.startDate.year}-${anilist.startDate.month}-${anilist.startDate.day}` : 'Tidak diketahui'}</p>
-        <p><strong>Tanggal Selesai:</strong> ${anilist.endDate ? `${anilist.endDate.year}-${anilist.endDate.month}-${anilist.endDate.day}` : 'Tidak diketahui'}</p>
-        <p><strong>Studios:</strong> ${anilist.studios ? anilist.studios.edges.map(edge => edge.node.name).join(', ') : 'Tidak diketahui'}</p>
-        <p><strong>Sumber:</strong> ${anilist.source || 'Tidak diketahui'}</p>
-        <p><strong>Anilist ID:</strong> ${anilist.id ? `<a href="https://anilist.co/anime/${anilist.id}" target="_blank">${anilist.id}</a>` : 'Tidak diketahui'} 
-           <strong>MAL ID:</strong> ${anilist.idMal ? `<a href="https://myanimelist.net/anime/${anilist.idMal}" target="_blank">${anilist.idMal}</a>` : 'Tidak diketahui'}</p>
+        <p><strong>Judul Romaji:</strong> <b style="color:#fff;">${title.romaji || 'Tidak diketahui'}</b></p>
+        <p><strong>Judul Jepang:</strong> ${title.native || '-'}</p>
+        <p><strong>Judul Inggris:</strong> ${title.english || '-'}</p>
+        <p><strong>Format:</strong> ${anilist.format || '-'} (${anilist.episodes || '?'} Eps)</p>
+        <p><strong>Status:</strong> ${anilist.status || '-'}</p>
+        <p><strong>Genre:</strong> <span style="color:var(--primary);">${anilist.genres ? anilist.genres.join(', ') : '-'}</span></p>
+        <p><strong>Studios:</strong> ${anilist.studios ? anilist.studios.edges.map(edge => edge.node.name).join(', ') : '-'}</p>
+        <p><strong>MAL ID:</strong> ${anilist.idMal ? `<a href="https://myanimelist.net/anime/${anilist.idMal}" target="_blank" style="color:#3b82f6;text-decoration:underline;">${anilist.idMal}</a>` : '-'}</p>
         ${moreInfoHTML}
       </div>
     </div>
   `;
 
-  // Tombol Tonton Full Episode
   const tontonBtn = detailContent.querySelector('#tonton-full');
   if (tontonBtn) {
-    tontonBtn.style.cssText = 'display:block; margin:6px auto 2px auto; padding:4px 10px; font-size:10px; background-color:#007bff; color:white; border:none; border-radius:4px; cursor:pointer;';
-    
     tontonBtn.addEventListener('click', async () => {
       const malId = anilist.idMal;
       if (!malId) {
-        tontonBtn.style.backgroundColor = 'gray';
-        tontonBtn.textContent = 'ID MAL tidak ditemukan';
+        tontonBtn.style.background = '#4b5563';
+        tontonBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> ID MAL tidak ditemukan';
         return;
       }
-
-      tontonBtn.textContent = 'Mengecek...';
+      tontonBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Mengecek Database...';
       tontonBtn.disabled = true;
-
       try {
-        const res = await fetch(`https://dev-mionime.wapka.top/api/external?service=mal_check&id=${malId}`);
+        const res = await fetch(`${window.location.origin}/check/${malId}`);
         const data = await res.json();
-
         if (data.code === 200) {
-          tontonBtn.style.backgroundColor = 'green';
-          tontonBtn.textContent = 'Tersedia! Mengarahkan...';
-          setTimeout(() => window.location.href = `https://{{VAR(HOST)}}${data.data}`, 3000);
-        } else if (data.code === 404) {
-          tontonBtn.style.backgroundColor = 'red';
-          tontonBtn.textContent = 'Tidak tersedia di database';
+          tontonBtn.style.background = '#10b981';
+          tontonBtn.style.borderColor = '#10b981';
+          tontonBtn.innerHTML = '<i class="fa-solid fa-check"></i> Tersedia! Mengarahkan...';
+          setTimeout(() => window.location.href = window.location.origin + data.data, 1500);
+        } else {
+          tontonBtn.style.background = '#ef4444';
+          tontonBtn.style.borderColor = '#ef4444';
+          tontonBtn.innerHTML = '<i class="fa-solid fa-xmark"></i> Belum tersedia di database';
+          setTimeout(() => {
+            tontonBtn.disabled = false;
+            tontonBtn.style.background = '';
+            tontonBtn.style.borderColor = '';
+            tontonBtn.innerHTML = '<i class="fa-solid fa-circle-play"></i> Tonton Full Episode di Mionime';
+          }, 3000);
         }
       } catch (err) {
-        tontonBtn.style.backgroundColor = 'orange';
-        tontonBtn.textContent = 'Gagal mengecek';
-      } finally {
+        tontonBtn.style.background = '#f59e0b';
+        tontonBtn.innerHTML = 'Gagal mengecek koneksi';
         tontonBtn.disabled = false;
       }
     });
   }
 
-  // Tampilkan detail sesuai ukuran layar
   if (window.innerWidth <= 600) {
     resultList.style.display = 'none';
     detailContent.style.display = 'block';
-    searchResultBox.style.maxWidth = '500px';
   } else {
     detailContent.style.display = 'block';
-    searchResultBox.style.maxWidth = '1100px';
-    resultList.style.maxWidth = '550px';
   }
-
-  // Scroll behavior
-  setTimeout(() => {
-    detailContent.scrollTop = isMoreInfoFetch && moreInfo ? 0 : 0;
-  }, 100);
-
-  // Event listeners untuk gambar dan video
   attachDetailEvents();
 }
 
 function attachDetailEvents() {
   const detailContent = document.getElementById('detail-content');
+  if (!detailContent) return;
 
-  // Preview video
   const detailPreview = detailContent.querySelector('.detail-preview.clickable');
   if (detailPreview) {
     detailPreview.addEventListener('click', function() {
       openModalVideo(this.querySelector('img').dataset.original);
     });
   }
-
-  // Trailer
   const trailerLink = detailContent.querySelector('.trailer-link.clickable');
   if (trailerLink) {
     trailerLink.addEventListener('click', function() {
       openModalIframe(this.dataset.trailer);
     });
   }
-
-  // Clickable images (poster, character, staff)
   detailContent.querySelectorAll('.poster.clickable, .character-list img.clickable, .staff-list img.clickable').forEach(img => {
     img.addEventListener('click', function() {
       openModalImage(this.dataset.fullsize);
     });
   });
 
-  // More info trigger
   const moreInfoTrigger = detailContent.querySelector('.more-info-trigger');
   if (moreInfoTrigger) {
     moreInfoTrigger.addEventListener('click', async function() {
       const anilistId = this.dataset.anilistId;
-      const loadingSpinner = document.createElement('div');
-      loadingSpinner.className = 'more-info-loading';
-      loadingSpinner.innerHTML = '<div class="spinner"></div>';
-      this.insertAdjacentElement('beforebegin', loadingSpinner);
-      this.style.display = 'none';
-
-      const moreInfo = await fetchMoreInfo(anilistId);
-      // Refresh detail dengan data baru
-      // Catatan: Anda perlu menyimpan data result saat ini jika ingin refresh otomatis
-      console.log('More info loaded for ID:', anilistId);
+      this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Memuat data karakter & staf...';
+      this.style.pointerEvents = 'none';
+      await fetchMoreInfo(anilistId);
+      const activeItem = document.querySelector('.result-item.active');
+      if (activeItem) activeItem.click();
     });
   }
 }
@@ -420,6 +326,7 @@ function attachDetailEvents() {
 function openModalVideo(src) {
   const modal = document.getElementById('videoModal');
   const modalVideo = document.getElementById('modalVideo');
+  if(!modal || !modalVideo) return;
   modalVideo.style.display = 'block';
   modalVideo.querySelector('source').src = src;
   modalVideo.load();
@@ -430,6 +337,7 @@ function openModalVideo(src) {
 function openModalIframe(src) {
   const modal = document.getElementById('videoModal');
   const modalIframe = document.getElementById('modalIframe');
+  if(!modal || !modalIframe) return;
   modalIframe.style.display = 'block';
   modalIframe.src = src;
   document.getElementById('search-result-box').style.display = 'none';
@@ -439,6 +347,7 @@ function openModalIframe(src) {
 function openModalImage(src) {
   const modal = document.getElementById('videoModal');
   const modalImage = document.getElementById('modalImage');
+  if(!modal || !modalImage) return;
   modalImage.style.display = 'block';
   modalImage.src = src;
   document.getElementById('search-result-box').style.display = 'none';
@@ -448,18 +357,10 @@ function openModalImage(src) {
 function closeDetail() {
   const detailContent = document.getElementById('detail-content');
   const resultList = document.getElementById('result-list');
-  const searchResultBox = document.getElementById('search-result-box');
   const lensSection = document.getElementById('google-lens-section');
-
-  detailContent.style.display = 'none';
-  resultList.style.display = 'block';
-  if (lensSection) {
-      lensSection.style.display = 'block';
-    }
-  if (window.innerWidth > 600) {
-    searchResultBox.style.maxWidth = '550px';
-    resultList.style.maxWidth = '550px';
-  }
+  if(detailContent) detailContent.style.display = 'none';
+  if(resultList) resultList.style.display = 'block';
+  if (lensSection) lensSection.style.display = 'block';
   document.querySelectorAll('.result-item').forEach(item => item.classList.remove('active'));
 }
 
@@ -471,103 +372,141 @@ function closeResultBox() {
   const fileInput = document.getElementById('file-short-anime');
   const imageUrlInput = document.getElementById('image-url');
   
-  resultBox.style.display = 'none';
-  resultList.innerHTML = '';
-  detailContent.innerHTML = '';
-  detailContent.style.display = 'none';
-  fileInput.value = '';
-  imageUrlInput.value = '';
-  floatingFooter.style.display = 'flex';
+  if(resultBox) resultBox.style.display = 'none';
+  if(resultList) resultList.innerHTML = '';
+  if(detailContent) { detailContent.innerHTML = ''; detailContent.style.display = 'none'; }
+  if(fileInput) fileInput.value = '';
+  if(imageUrlInput) imageUrlInput.value = '';
+  if(floatingFooter) floatingFooter.style.display = 'flex';
 
-  // Reset cache
   moreInfoCache.clear();
   googleLensCache = null;
   currentSearchImageUrl = null;
 }
 
-document.getElementById('file-short-anime').addEventListener('change', async function() {
-  const file = this.files[0];
-  if (!file) return;
+function closeModal() {
+  const modal = document.getElementById('videoModal');
+  if (!modal) return;
+  modal.style.display = 'none';
 
-  const loading = document.getElementById('loading_file');
-  const uploadIcon = document.querySelector('.upload-icon');
+  const modalVideo = document.getElementById('modalVideo');
+  const modalIframe = document.getElementById('modalIframe');
+  const modalImage = document.getElementById('modalImage');
+
+  if (modalVideo) {
+    modalVideo.pause();
+    modalVideo.style.display = 'none';
+    if (modalVideo.querySelector('source')) modalVideo.querySelector('source').src = '';
+    modalVideo.load();
+  }
+  if (modalIframe) { modalIframe.style.display = 'none'; modalIframe.src = ''; }
+  if (modalImage) { modalImage.style.display = 'none'; modalImage.src = ''; }
+
+  const resultBox = document.getElementById('search-result-box');
   const resultList = document.getElementById('result-list');
-  const detailContent = document.getElementById('detail-content');
+  if (resultBox && resultList && resultList.innerHTML.trim() !== '') {
+    resultBox.style.display = 'block';
+  }
+}
 
-  loading.style.display = 'block';
-  uploadIcon.style.display = 'none';
-  resultList.innerHTML = '';
-  detailContent.innerHTML = '';
-  moreInfoCache.clear();
-  googleLensCache = null;
-
-  try {
-    // 1. Konversi file gambar ke Base64 Data-URI menggunakan Promise & FileReader
-    const base64DataUri = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result); // Hasilnya: "data:image/png;base64,iVBORw..."
-      reader.onerror = error => reject(error);
-      reader.readAsDataURL(file);
-    });
-
-    // 2. Kirim sebagai JSON body sesuai spesifikasi baru backend Lua
-    const res = await fetch("https://dev-mionime.wapka.top/api/external", {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json' 
-      },
-      body: JSON.stringify({
-        service: 'upload',
-        image: base64DataUri
-      })
-    });
-
-    if (!res.ok) throw new Error(`Upload error: ${res.status}`);
-
-    const data = await res.json();
-    // Asumsi response dari server Lua mengembalikan { secure_url: "..." } atau { url: "..." }
-    const imageUrl = data.secure_url || data.url; 
-
-    // Lanjutkan pencarian menggunakan URL gambar yang sudah diupload
-    await performSearch(null, imageUrl);
-  } catch (error) {
-    console.error('Upload error:', error);
-    resultList.innerHTML = `<p class="error">Gagal mengunggah gambar: ${error.message}</p>`;
-  } finally {
-    loading.style.display = 'none';
-    uploadIcon.style.display = 'block';
-    this.value = '';
+document.addEventListener('click', function(e) {
+  if (e.target.matches('.close-modal') || e.target.matches('.modal')) {
+    closeModal();
   }
 });
 
-document.getElementById('search-anime-btn').addEventListener('click', function() {
-  const urlInput = document.getElementById('image-url');
-  if (urlInput && urlInput.value) {
+// Event Listener Upload Gambar dengan Disable State
+const fileInputEl = document.getElementById('file-short-anime');
+if (fileInputEl) {
+  fileInputEl.addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+
     const loading = document.getElementById('loading_file');
-    const uploadIcon = document.querySelector('.upload-icon');
-    loading.style.display = 'block';
-    uploadIcon.style.display = 'none';
+    const uploadIcon = document.querySelector('.scene-upload-icon');
+    const resultList = document.getElementById('result-list');
+    const detailContent = document.getElementById('detail-content');
+
+    if(loading) loading.style.display = 'block';
+    if(uploadIcon) uploadIcon.style.display = 'none';
+    if(resultList) resultList.innerHTML = '';
+    if(detailContent) detailContent.innerHTML = '';
     moreInfoCache.clear();
     googleLensCache = null;
-    performSearch(null, urlInput.value);
+
+    // Aktifkan Lock Button
+    setBtnLoadingState(true, "Mengunggah...");
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', 'chat_meownime');
+      formData.append('cloud_name', 'meownime');
+
+      const res = await fetch(atob("aHR0cHM6Ly9hcGkuY2xvdWRpbmFyeS5jb20vdjFfMS9tZW93bmltZS9hdXRvL3VwbG9hZA=="), {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error(`Upload error: ${res.status}`);
+      const data = await res.json();
+      await performSearch(null, data.secure_url);
+    } catch (error) {
+      if(resultList) resultList.innerHTML = `<p style="color:var(--primary);padding:15px;">Gagal mengunggah gambar: ${error.message}</p>`;
+    } finally {
+      if(loading) loading.style.display = 'none';
+      if(uploadIcon) uploadIcon.style.display = 'block';
+      this.value = '';
+      // Lepaskan Lock Button
+      setBtnLoadingState(false, "Cari");
+    }
+  });
+}
+
+function isValidImageLink(value) {
+  return /^https?:\/\/\S+\.\S+/i.test(value);
+}
+
+function triggerSceneUrlSearch() {
+  const urlInput = document.getElementById('image-url');
+  const rawValue = urlInput ? urlInput.value.trim() : '';
+  if (rawValue !== '' && isValidImageLink(rawValue)) {
+    const loading = document.getElementById('loading_file');
+    const uploadIcon = document.querySelector('.scene-upload-icon');
+    if(loading) loading.style.display = 'block';
+    if(uploadIcon) uploadIcon.style.display = 'none';
+    moreInfoCache.clear();
+    googleLensCache = null;
+    performSearch(null, rawValue);
   } else {
-    alert('Masukkan URL gambar atau pilih file terlebih dahulu!');
+    alert('Masukkan LINK / URL gambar yang valid (diawali http:// atau https://), bukan teks judul!\nUntuk pencarian dengan tulisan, gunakan kolom pencarian di bar situs paling atas.');
   }
-});
+}
+
+const searchBtnEl = document.getElementById('search-anime-btn');
+if (searchBtnEl) searchBtnEl.addEventListener('click', triggerSceneUrlSearch);
+
+const urlInputEl = document.getElementById('image-url');
+if (urlInputEl) {
+  urlInputEl.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); triggerSceneUrlSearch(); }
+  });
+}
 
 async function performSearch(base64Image, imageUrl) {
   const resultBox = document.getElementById('search-result-box');
   const resultList = document.getElementById('result-list');
   const detailContent = document.getElementById('detail-content');
   const loading = document.getElementById('loading_file');
-  const uploadIcon = document.querySelector('.upload-icon');
+  const uploadIcon = document.querySelector('.scene-upload-icon');
   const floatingFooter = document.getElementById('floating-footer');
 
-  resultList.innerHTML = '';
-  detailContent.innerHTML = '';
-  detailContent.style.display = 'none';
-  resultBox.style.display = 'none';
-  resultBox.style.maxWidth = window.innerWidth > 600 ? '550px' : '500px';
+  if(resultList) resultList.innerHTML = '';
+  if(detailContent) { detailContent.innerHTML = ''; detailContent.style.display = 'none'; }
+  if(resultBox) resultBox.style.display = 'none';
+
+  // Aktifkan Lock Button (Mencegah Double Click)
+  setBtnLoadingState(true, "Mencari...");
 
   try {
     const params = new URLSearchParams();
@@ -577,11 +516,9 @@ async function performSearch(base64Image, imageUrl) {
     params.append('anilistInfo', 1);
     params.append('cutBorders', 1);
 
-    const TRACE_URL = "https://dev-mionime.wapka.top/api/external?service=trace";
-    const response = await fetch(`${TRACE_URL}&${params.toString()}`, { method: 'GET' });
-
+    const TRACE_URL = atob("aHR0cHM6Ly9hcGkubWVvd25pbWUubmV0L2FwaS90cmFjZQ==");
+    const response = await fetch(`${TRACE_URL}?${params.toString()}`, { method: 'GET' });
     if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
-
     const data = await response.json();
 
     if (data.result && data.result.length > 0) {
@@ -604,20 +541,21 @@ async function performSearch(base64Image, imageUrl) {
 
         const previewDivHTML = `
           <div class="preview-media ${hasVideo ? 'clickable' : ''}">
-            <img src="${result.image || 'https://via.placeholder.com/100?text=Video'}" height="100px" width="100px" alt="preview" ${hasVideo ? `data-original="${result.video}"` : ''}>
-            ${hasVideo ? '<span class="play-icon">▶︎</span>' : ''}
+            <img src="${result.image || 'https://via.placeholder.com/100?text=Video'}" height="100" width="100" alt="preview" ${hasVideo ? `data-original="${result.video}"` : ''}>
+            ${hasVideo ? '<span class="play-icon"><i class="fa-solid fa-play"></i></span>' : ''}
           </div>
         `;
 
         resultList.innerHTML += `
           <div class="result-item" data-id="${anilistId}" data-video="${result.video || ''}" data-filename="${result.filename || 'Tidak diketahui'}" data-from="${result.from}" data-to="${result.to}" data-anilist='${JSON.stringify(anilist).replace(/'/g, '&apos;')}' data-image="${result.image || ''}">
             <div class="summary-info">
-              <div class="anime-title">${title.native || 'Tidak diketahui'}</div>
-              <div class="anime-subtitle">${title.romaji || 'Tidak diketahui'}</div>
-              <hr>
-              <p class="episode">Episode: ${result.episode || 'Tidak diketahui'}</p>
-              <p class="time">Waktu Scene: ${formatTime(result.from)} - ${formatTime(result.to)}</p>
-              <p>Similarity: ${(result.similarity * 100).toFixed(2)}%</p>
+              <div class="anime-title">${title.romaji || title.native || 'Tidak diketahui'}</div>
+              <div class="anime-subtitle">${title.native || ''}</div>
+              <div style="display:flex;gap:12px;margin-top:6px;">
+                <span class="episode"><i class="fa-solid fa-tv"></i> Eps ${result.episode || '?'}</span>
+                <span class="time"><i class="fa-solid fa-stopwatch"></i> ${formatTime(result.from)}</span>
+              </div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Akurasi: <b style="color:#10b981;">${(result.similarity * 100).toFixed(1)}%</b></div>
             </div>
             ${previewDivHTML}
           </div>
@@ -625,46 +563,42 @@ async function performSearch(base64Image, imageUrl) {
       });
 
       attachResultEvents();
-
       setTimeout(() => {
-        resultBox.style.display = 'block';
-        floatingFooter.style.display = 'none';
+        if(resultBox) resultBox.style.display = 'block';
+        if(floatingFooter) floatingFooter.style.display = 'none';
       }, 100);
 
-      // Google Lens - Hanya fetch sekali
       if (imageUrl) {
         currentSearchImageUrl = imageUrl;
         if (!googleLensCache) {
-          setTimeout(() => {
-            fetchGoogleLens(imageUrl);
-          }, 800);
+          setTimeout(() => fetchGoogleLens(imageUrl), 800);
         } else {
-          // Tampilkan cache yang sudah ada
           setTimeout(() => {
             const lensSection = document.getElementById('google-lens-section');
             const lensContainer = document.getElementById('lens-results');
-            lensSection.style.display = 'block';
-            lensContainer.innerHTML = googleLensCache;
+            if(lensSection && lensContainer) {
+              lensSection.style.display = 'block';
+              lensContainer.innerHTML = googleLensCache;
+            }
           }, 300);
         }
       }
-
     } else {
-      resultList.innerHTML = '<p>Tidak ditemukan hasil yang cocok.</p>';
+      if(resultList) resultList.innerHTML = '<p style="padding:20px;text-align:center;color:var(--text-muted);">Tidak ditemukan hasil yang cocok dengan scene ini.</p>';
       setTimeout(() => {
-        resultBox.style.display = 'block';
-        floatingFooter.style.display = 'none';
+        if(resultBox) resultBox.style.display = 'block';
+        if(floatingFooter) floatingFooter.style.display = 'none';
       }, 100);
     }
-
   } catch (error) {
-    console.error('Search error:', error);
-    resultList.innerHTML = `<p class="error">Gagal mencari: ${error.message}, coba lagi (fitur ini hanya untuk pencarian anime berdasarkan link gambar atau unggah foto dari scene anime bukan pencarian keyword tulisan, gunakan pencarian di bar situs paling atas jika ingin mencari dengan tulisan) agar hasil lebih akurat gunakan foto rasionya 16:9 untuk lebih jelasnya bisa lihat tutor berikut <a href="https://www.dropbox.com/scl/fi/pt3phm9w8spvtivxs8whc/tutor.mp4?rlkey=mdrurqsh3d33m3lxn2yxk686p&st=qlom0qfk&dl=0" target="_blank">>>Lihat disini<<</a></p>`;
-    floatingFooter.style.display = 'flex';
-    setTimeout(() => resultBox.style.display = 'block', 100);
+    if(resultList) resultList.innerHTML = `<p style="color:var(--primary);padding:15px;line-height:1.6;font-size:13px;">Gagal mencari: ${error.message}.<br>Pastikan kamu menggunakan gambar dengan rasio 16:9 agar hasil akurat.</p>`;
+    if(floatingFooter) floatingFooter.style.display = 'flex';
+    setTimeout(() => { if(resultBox) resultBox.style.display = 'block'; }, 100);
   } finally {
     if (loading) loading.style.display = 'none';
     if (uploadIcon) uploadIcon.style.display = 'block';
+    // Lepaskan Lock Button Setelah Selesai
+    setBtnLoadingState(false, "Cari");
   }
 }
 
@@ -691,69 +625,33 @@ function attachResultEvents() {
   });
 }
 
-// Global click handler untuk modal
-document.addEventListener('click', function(e) {
-  if (e.target.matches('.close-modal') || e.target.matches('.modal')) {
-    const modal = document.getElementById('videoModal');
-    modal.style.display = 'none';
-    const modalVideo = document.getElementById('modalVideo');
-    const modalIframe = document.getElementById('modalIframe');
-    const modalImage = document.getElementById('modalImage');
+// Auto Mode Switch Welcome <-> Scene
+let sceneUserInteracted = false;
+let sceneAutoTimer = null;
+let currentWelcomeMode = 'welcome';
 
-    modalVideo.pause();
-    modalVideo.querySelector('source').src = '';
-    modalIframe.src = '';
-    modalImage.src = '';
-
-    if (document.getElementById('result-list').innerHTML) {
-      document.getElementById('search-result-box').style.display = 'block';
-    }
-  }
-});
-
-// ================== CLOSE MODAL FUNCTION ==================
-function closeModal() {
-  const modal = document.getElementById('videoModal');
-  if (!modal) return;
-
-  modal.style.display = 'none';
-
-  // Reset semua media
-  const modalVideo = document.getElementById('modalVideo');
-  const modalIframe = document.getElementById('modalIframe');
-  const modalImage = document.getElementById('modalImage');
-
-  if (modalVideo) {
-    modalVideo.pause();
-    modalVideo.style.display = 'none';
-    if (modalVideo.querySelector('source')) {
-      modalVideo.querySelector('source').src = '';
-    }
-    modalVideo.load();
-  }
-
-  if (modalIframe) {
-    modalIframe.style.display = 'none';
-    modalIframe.src = '';
-  }
-
-  if (modalImage) {
-    modalImage.style.display = 'none';
-    modalImage.src = '';
-  }
-
-  // Kembalikan search result box jika ada hasil
-  const resultBox = document.getElementById('search-result-box');
-  const resultList = document.getElementById('result-list');
-  
-  if (resultBox && resultList && resultList.innerHTML.trim() !== '') {
-    resultBox.style.display = 'block';
-  }
+function lockSceneAutoSwitch() {
+  sceneUserInteracted = true;
+  if (sceneAutoTimer) { clearInterval(sceneAutoTimer); sceneAutoTimer = null; }
 }
 
-// Optional: Tambahkan juga event listener backup (sudah ada tapi lebih aman)
-document.addEventListener('click', function(e) {
-  if (e.target.matches('.close-modal') || e.target.matches('.modal')) {
-    closeModal();
-  }
+function toggleWelcomeSceneMode(fromUser) {
+  if (fromUser) lockSceneAutoSwitch();
+  currentWelcomeMode = (currentWelcomeMode === 'welcome') ? 'scene' : 'welcome';
+  const panelDefault = document.getElementById('welcomeModeDefault');
+  const panelScene = document.getElementById('welcomeModeScene');
+  if (!panelDefault || !panelScene) return;
+  panelDefault.style.display = (currentWelcomeMode === 'welcome') ? 'block' : 'none';
+  panelScene.style.display = (currentWelcomeMode === 'scene') ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const panelScene = document.getElementById('welcomeModeScene');
+  if (!panelScene) return;
+  sceneAutoTimer = setInterval(function() {
+    if (!sceneUserInteracted) toggleWelcomeSceneMode(false);
+  }, 5000);
+  ['focusin', 'click', 'change', 'paste', 'input'].forEach(evt => {
+    panelScene.addEventListener(evt, lockSceneAutoSwitch);
+  });
 });
