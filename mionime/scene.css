@@ -1,614 +1,609 @@
+/* Mionime Scene Search Styles - Fixed Layout & Anti Overflow */
+.search-result-box, .search-result-header, #search-result-content, #result-list, #detail-content, .result-item, .detail-section, .video-wrapper {
+  box-sizing: border-box;
+}
+
 .preview-media, .trailer-link, .detail-preview {
-    position: relative;
-    display: inline-block;
-    margin: 10px 0;
-  }
+  position: relative;
+  display: inline-block;
+  margin: 10px 0;
+}
 
-  .preview-media img, .trailer-link img {
-    display: block;
-    width: 100px;
-    height: 100px;
-    transition: transform 0.2s;
-  }
+.preview-media img, .trailer-link img {
+  display: block;
+  width: 100px;
+  height: 100px;
+  transition: transform 0.2s;
+  object-fit: cover;
+}
 
-  .detail-preview img {
-    width: 100%;
-    max-width: 300px;
-    height: auto;
-    aspect-ratio: 16/9;
-    transition: transform 0.2s;
-  }
+.detail-preview img {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  aspect-ratio: 16/9;
+  transition: transform 0.2s;
+  object-fit: cover;
+}
 
-  .preview-media.clickable img, .trailer-link.clickable img, .detail-preview.clickable img,
-  .poster.clickable, .character-list img.clickable, .staff-list img.clickable {
-    cursor: pointer;
-  }
+.preview-media.clickable img, .trailer-link.clickable img, .detail-preview.clickable img,
+.poster.clickable, .character-list img.clickable, .staff-list img.clickable {
+  cursor: pointer;
+}
 
-  .preview-media.clickable:hover img, .trailer-link.clickable:hover img, .detail-preview.clickable:hover img,
-  .poster.clickable:hover, .character-list img.clickable:hover, .staff-list img.clickable:hover {
-    transform: scale(1.05);
-  }
+.preview-media.clickable:hover img, .trailer-link.clickable:hover img, .detail-preview.clickable:hover img,
+.poster.clickable:hover, .character-list img.clickable:hover, .staff-list img.clickable:hover {
+  transform: scale(1.05);
+}
 
-  .preview-media:not(.clickable) img, .trailer-link:not(.clickable) img, .detail-preview:not(.clickable) img,
-  .poster:not(.clickable), .character-list img:not(.clickable), .staff-list img:not(.clickable) {
-    cursor: default;
-  }
+.preview-media:not(.clickable) img, .trailer-link:not(.clickable) img, .detail-preview:not(.clickable) img,
+.poster:not(.clickable), .character-list img:not(.clickable), .staff-list img:not(.clickable) {
+  cursor: default;
+}
 
-  .play-icon {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 24px;
-    color: #fff;
-    background: rgba(0, 0, 0, 0.6);
-    padding: 8px;
-    border-radius: 50%;
-    display: none;
-    pointer-events: none;
-  }
+.play-icon {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px;
+  border-radius: 50%;
+  display: none;
+  pointer-events: none;
+}
 
-  .preview-media.clickable:hover .play-icon, .trailer-link.clickable:hover .play-icon, .detail-preview.clickable:hover .play-icon {
-    display: block;
-  }
+.preview-media.clickable:hover .play-icon, .trailer-link.clickable:hover .play-icon, .detail-preview.clickable:hover .play-icon {
+  display: block;
+}
 
-  .floating-footer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    width: 100%;
-    max-width: 620px;
-    margin: 14px auto 0 auto;
-    padding: 0;
-    text-align: left;
-  }
+.floating-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  max-width: 620px;
+  margin: 14px auto 0 auto;
+  padding: 0;
+  text-align: left;
+}
 
-  .file-input-wrapper {
-    display: flex;
-    align-items: center;
-  }
+.file-input-wrapper {
+  display: flex;
+  align-items: center;
+}
 
-  #loading_file {
-    display: none;
-    padding: 2px;
-  }
+#loading_file {
+  display: none;
+  padding: 2px;
+}
 
-  .scene-mini-spinner {
-    width: 20px;
-    height: 20px;
-    border: 3px solid rgba(255, 255, 255, 0.15);
-    border-top: 3px solid var(--primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
+.scene-mini-spinner {
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top: 3px solid var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+#image-url {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-body);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  padding: 9px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#image-url:focus {
+  border-color: var(--primary);
+}
+
+#image-url::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+button#search-anime-btn {
+  padding: 9px 16px;
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+button#search-anime-btn:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.result-item {
+  margin-bottom: 15px;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.result-item:hover {
+  background-color: #f0f0f0;
+}
+
+.result-item.active {
+  background-color: #e0e0e0;
+}
+
+.summary-info {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.anime-title {
+  font-size: 1.1em;
+  font-weight: bold;
+}
+
+.anime-subtitle {
+  color: #666;
+  font-style: italic;
+}
+
+.episode {
+  color: red;
+}
+
+.time {
+  color: green;
+}
+
+.detail-section {
+  position: relative;
+  width: 100%;
+}
+
+.video-preview {
+  text-align: center;
+  position: relative;
+  width: 100%;
+}
+
+.video-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  aspect-ratio: 16/9;
+  overflow: hidden;
+}
+
+.more-info-loading {
+  position: relative;
+  width: 100%;
+  height: 40px;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+.more-info-loading.hidden {
+  opacity: 0;
+  pointer-events: none;
+  display: none;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #007bff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-dots::after {
+  content: '';
+  display: inline-block;
+  width: 20px;
+  text-align: left;
+  animation: dots 1.5s steps(5, end) infinite;
+}
+
+@keyframes dots {
+  0% { content: ''; }
+  20% { content: '.'; }
+  40% { content: '..'; }
+  60% { content: '...'; }
+  80% { content: '....'; }
+  100% { content: ''; }
+}
+
+.filename-small {
+  font-size: 0.8em;
+  color: #666;
+  text-align: center;
+  margin-top: 5px;
+  word-break: break-all;
+}
+
+.full-info {
+  overflow: hidden;
+  width: 100%;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.poster {
+  float: left;
+  margin-right: 10px;
+  width: 100px;
+  height: auto;
+}
+
+.detail-close {
+  position: sticky;
+  top: 10px;
+  right: 10px;
+  float: right;
+  color: red;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 2500;
+}
+
+.search-result-box {
+  background: #ffffff;
+  color: #000000;
+  border-color: #cccccc;
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border: 1px solid;
+  border-radius: 5px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  max-height: 85vh;
+  width: 95%;
+  max-width: 650px;
+  z-index: 1001;
+  overflow: hidden;
+  transition: max-width 0.3s ease;
+}
+
+.search-result-header {
+  background: #ffffff;
+  color: #000000;
+  border-color: #cccccc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid;
+  position: sticky;
+  top: 0;
+  z-index: 1002;
+  width: 100%;
+}
+
+body.darkmode .search-result-box,
+body.darkmode .search-result-header {
+  background: #1a1a1a;
+  color: #ffffff;
+  border-color: #444444;
+}
+
+body.darkmode .result-item {
+  border-color: #444444;
+}
+
+body.darkmode .result-item:hover {
+  background-color: #2a2a2a;
+}
+
+body.darkmode .result-item.active {
+  background-color: #333333;
+}
+
+.close-btn:hover {
+  color: #ff0000;
+}
+
+#detail-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+#detail-content::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+#detail-content::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+#detail-content::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+body.darkmode #detail-content::-webkit-scrollbar-track {
+  background: #2a2a2a;
+}
+
+body.darkmode #detail-content::-webkit-scrollbar-thumb {
+  background: #666;
+}
+
+body.darkmode #detail-content::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+#detail-content {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #f0f0f0;
+}
+
+body.darkmode #detail-content {
+  scrollbar-color: #666 #2a2a2a;
+}
+
+.synopsis {
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 5px;
+  clear: both;
+}
+
+.character-list p, .staff-list p {
+  margin: 5px 0;
+  display: grid;
+  grid-template-columns: 50px 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.character-list img, .staff-list img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 5px;
+}
+
+.more-info-trigger {
+  cursor: pointer;
+  color: #007bff;
+  text-decoration: underline;
+  display: inline-block;
+  margin: 10px 0;
+}
+
+.more-info-trigger:hover {
+  color: #0056b3;
+}
+
+/* ===== STRUKTUR LAYOUT SPLIT KONTEN ===== */
+#search-result-content {
+  padding: 12px 15px;
+  max-height: calc(85vh - 55px);
+  overflow-y: auto;
+  width: 100%;
+  display: flex;
+  gap: 15px;
+}
+
+#result-list {
+  flex: 1 1 100%;
+  max-width: 100%;
+  overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+#detail-content {
+  flex: 1 1 50%;
+  max-width: 50%;
+  display: none;
+  padding-left: 15px;
+  border-left: 1px dashed var(--border, #ccc);
+  position: sticky;
+  top: 0;
+  overflow-y: auto;
+  max-height: calc(85vh - 55px);
+}
+
+@media (max-width: 600px) {
+  .search-result-box {
+    width: 95%;
+    max-width: 450px;
   }
 
   #image-url {
-    flex: 1;
-    min-width: 0;
-    background: var(--bg-body);
-    border: 1px solid var(--border);
-    color: var(--text-main);
-    padding: 9px 14px;
-    border-radius: 20px;
     font-size: 13px;
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  #image-url:focus {
-    border-color: var(--primary);
-  }
-
-  #image-url::placeholder {
-    color: var(--text-muted);
-    opacity: 0.7;
+    padding: 8px 12px;
   }
 
   button#search-anime-btn {
-    padding: 9px 16px;
-    background-color: var(--primary);
-    color: #fff;
-    border: none;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 700;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    white-space: nowrap;
-    transition: opacity 0.2s, transform 0.2s;
+    padding: 8px 12px;
+    font-size: 12px;
   }
 
-  button#search-anime-btn:hover {
-    opacity: 0.88;
-    transform: translateY(-1px);
-  }
-
-  .result-item {
-    margin-bottom: 15px;
-    padding: 10px;
-    border: 1px solid #eee;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    overflow: hidden;
-  }
-
-  .result-item:hover {
-    background-color: #f0f0f0;
-  }
-
-  .result-item.active {
-    background-color: #e0e0e0;
-  }
-
-  .summary-info {
-    display: inline-block;
-    width: calc(100% - 120px);
+  .preview-media img, .trailer-link img {
+    height: 80px;
+    width: 80px;
   }
 
   .anime-title {
-    font-size: 1.1em;
-    font-weight: bold;
-  }
-
-  .anime-subtitle {
-    color: #666;
-    font-style: italic;
-  }
-
-  .episode {
-    color: red;
-  }
-
-  .time {
-    color: green;
-  }
-
-  .detail-section {
-    position: relative;
-  }
-
-  .video-preview {
-    text-align: center;
-    position: relative;
-  }
-
-  .video-wrapper {
-    position: relative;
-    width: 100%;
-    max-width: 300px;
-    margin: 0 auto;
-    aspect-ratio: 16/9;
-    overflow: hidden;
-  }
-
-  .more-info-loading {
-    position: relative;
-    width: 100%;
-    height: 40px;
-    background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-    opacity: 1;
-    transition: opacity 0.5s ease;
-  }
-
-  .more-info-loading.hidden {
-    opacity: 0;
-    pointer-events: none;
-    display: none;
-  }
-
-  .spinner {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #007bff;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    animation: spin 1s linear infinite;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  .loading-dots::after {
-    content: '';
-    display: inline-block;
-    width: 20px;
-    text-align: left;
-    animation: dots 1.5s steps(5, end) infinite;
-  }
-
-  @keyframes dots {
-    0% { content: ''; }
-    20% { content: '.'; }
-    40% { content: '..'; }
-    60% { content: '...'; }
-    80% { content: '....'; }
-    100% { content: ''; }
-  }
-
-  .filename-small {
-    font-size: 0.8em;
-    color: #666;
-    text-align: center;
-    margin-top: 5px;
-  }
-
-  .full-info {
-    overflow: hidden;
-  }
-
-  .poster {
-    float: left;
-    margin-right: 10px;
-    width: 100px;
-    height: auto;
-  }
-
-  .detail-close {
-    position: sticky;
-    top: 10px;
-    right: 10px;
-    float: right;
-    color: red;
-    font-size: 24px;
-    cursor: pointer;
-    z-index: 2500;
-  }
-
-  .search-result-box {
-    background: #ffffff;
-    color: #000000;
-    border-color: #cccccc;
-  }
-
-  .search-result-header {
-    background: #ffffff;
-    color: #000000;
-    border-color: #cccccc;
-  }
-
-  body.darkmode .search-result-box,
-  body.darkmode .search-result-header {
-    background: #1a1a1a;
-    color: #ffffff;
-    border-color: #444444;
-  }
-
-  body.darkmode .result-item {
-    border-color: #444444;
-  }
-
-  body.darkmode .result-item:hover {
-    background-color: #2a2a2a;
-  }
-
-  body.darkmode .result-item.active {
-    background-color: #333333;
-  }
-
-  .close-btn:hover {
-    color: #ff0000;
-  }
-
-  #detail-content::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  #detail-content::-webkit-scrollbar-track {
-    background: #f0f0f0;
-    border-radius: 4px;
-  }
-
-  #detail-content::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 4px;
-  }
-
-  #detail-content::-webkit-scrollbar-thumb:hover {
-    background: #555;
-  }
-
-  body.darkmode #detail-content::-webkit-scrollbar-track {
-    background: #2a2a2a;
-  }
-
-  body.darkmode #detail-content::-webkit-scrollbar-thumb {
-    background: #666;
-  }
-
-  body.darkmode #detail-content::-webkit-scrollbar-thumb:hover {
-    background: #888;
-  }
-
-  #detail-content {
-    scrollbar-width: thin;
-    scrollbar-color: #888 #f0f0f0;
-  }
-
-  body.darkmode #detail-content {
-    scrollbar-color: #666 #2a2a2a;
-  }
-
-  .synopsis {
-    max-height: 150px;
-    overflow-y: auto;
-    padding-right: 5px;
-  }
-
-  .character-list p, .staff-list p {
-    margin: 5px 0;
-    display: grid;
-    grid-template-columns: 50px 200px 1fr;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .character-list img, .staff-list img {
-    width: 50px;
-    height: 50px;
-    object-fit: cover;
-    border-radius: 5px;
-  }
-
-  .more-info-trigger {
-    cursor: pointer;
-    color: #007bff;
-    text-decoration: underline;
-    display: inline-block;
-    margin: 10px 0;
-  }
-
-  .more-info-trigger:hover {
-    color: #0056b3;
-  }
-
-  @media (max-width: 600px) {
-    .search-result-box {
-      width: 90%;
-      max-width: 400px;
-    }
-
-    #image-url {
-      font-size: 13px;
-      padding: 8px 12px;
-    }
-
-    button#search-anime-btn {
-      padding: 8px 12px;
-      font-size: 12px;
-    }
-
-    .preview-media img, .trailer-link img {
-      height: 80px;
-      width: 80px;
-    }
-
-    .anime-title {
-      font-size: 1em;
-    }
-
-    #search-result-content {
-      max-height: calc(80vh - 50px);
-      display: block;
-    }
-
-    #result-list {
-      max-width: 100%;
-    }
-
-    #detail-content {
-      display: none;
-      padding-left: 5px;
-      padding-right: 5px;
-      overflow-y: auto;
-      max-height: calc(80vh - 50px);
-    }
-
-    .summary-info {
-      width: calc(100% - 100px);
-    }
-
-    .poster {
-      width: 80px;
-    }
-
-    .character-list p, .staff-list p {
-      grid-template-columns: 50px 150px 1fr;
-    }
-
-    .video-wrapper {
-      max-width: 100%;
-    }
-
-    .detail-preview img {
-      max-width: 100%;
-    }
-  }
-
-  @media (min-width: 601px) {
-    #search-result-content {
-      display: flex;
-    }
-
-    #detail-content {
-      display: none;
-      min-height: 100%;
-    }
-
-    .search-result-box {
-      max-width: 1100px;
-    }
-
-    #result-list {
-      max-width: 550px;
-    }
-  }
-
-  /* ===== Toggle mode Welcome <-> Scene di welcome container ===== */
-  .welcome-scene-host { position: relative; }
-
-  .scene-mode-toggle {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 32px;
-    height: 32px;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    border-radius: 50%;
-    font-size: 13px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    z-index: 5;
-  }
-
-  .scene-mode-toggle:hover {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: #fff;
-    transform: rotate(180deg);
-  }
-
-  .welcome-mode-panel { animation: sceneFadeIn 0.35s ease; }
-
-  @keyframes sceneFadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: none; }
-  }
-
-  .scene-upload-icon i {
-    color: var(--primary);
-    font-size: 22px;
-    cursor: pointer;
-    transition: transform 0.2s;
-  }
-
-  .scene-upload-icon:hover i { transform: scale(1.12); }
-
-  /* ===== Pemindahan style inline original ke class (efisiensi) ===== */
-  .search-result-box {
-    display: none;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 1px solid;
-    border-radius: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    max-height: 80vh;
-    width: 95%;
-    z-index: 1001;
-    overflow: hidden;
-  }
-
-  .search-result-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 15px;
-    border-bottom: 1px solid;
-    position: sticky;
-    top: 0;
-    z-index: 1002;
-  }
-
-  .search-result-header h3 { margin: 0; font-size: 16px; }
-
-  .srh-right { display: flex; align-items: center; gap: 10px; }
-
-  .srh-brand { font-size: 11px; color: #999; }
-
-  .srh-close, .close-btn {
-    background: none;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-  }
-
-  .lens-section {
-    display: none;
-    padding: 12px 15px 10px;
-    border-bottom: 1px solid #eee;
-    background: none;
-  }
-
-  .lens-results {
-    overflow: auto;
-    white-space: nowrap;
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-    padding-bottom: 5px;
+    font-size: 1em;
   }
 
   #search-result-content {
-    padding: 10px 15px;
     max-height: calc(80vh - 50px);
-    overflow-y: auto;
-    box-sizing: border-box;
+    display: block;
   }
 
-  #result-list {
-    flex: 1;
-    overflow-y: auto;
+  #result-list, #detail-content {
+    max-width: 100%;
+    width: 100%;
+    flex: 1 1 100%;
   }
 
   #detail-content {
-    flex: 1;
-    max-width: 550px;
     display: none;
-    padding-left: 15px;
-    position: sticky;
-    top: 0;
-    overflow-y: auto;
-    max-height: calc(80vh - 50px);
+    padding-left: 0;
+    border-left: none;
+    border-top: 1px dashed #ccc;
+    padding-top: 15px;
+    max-height: none;
   }
 
-  .modal {
-    display: none;
-    position: fixed;
-    z-index: 2000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+  .summary-info {
+    width: calc(100% - 90px);
   }
 
-  .modal-content {
-    position: relative;
-    margin: 0 auto;
-    padding: 0;
-    width: 80%;
-    max-width: 600px;
-    background: #000;
-    border-radius: 8px;
-    top: 50%;
-    transform: translateY(-50%);
+  .poster {
+    width: 80px;
   }
+}
 
-  .close-modal {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    color: #fff;
-    font-size: 24px;
-    cursor: pointer;
-    z-index: 2500;
-  }
+/* ===== Toggle mode Welcome <-> Scene di welcome container ===== */
+.welcome-scene-host { position: relative; }
 
-  #modalVideo { width: 100%; border-radius: 8px; display: none; }
-  #modalIframe { width: 100%; height: 337px; border-radius: 8px; display: none; }
-  #modalImage { width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; display: none; }
+.scene-mode-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  border-radius: 50%;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.scene-mode-toggle:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  transform: rotate(180deg);
+}
+
+.welcome-mode-panel { animation: sceneFadeIn 0.35s ease; }
+
+@keyframes sceneFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+
+.scene-upload-icon i {
+  color: var(--primary);
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.scene-upload-icon:hover i { transform: scale(1.12); }
+
+.search-result-header h3 { margin: 0; font-size: 16px; }
+
+.srh-right { display: flex; align-items: center; gap: 10px; }
+
+.srh-brand { font-size: 11px; color: #999; }
+
+.srh-close, .close-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.lens-section {
+  display: none;
+  padding: 12px 15px 10px;
+  border-bottom: 1px solid #eee;
+  background: none;
+}
+
+.lens-results {
+  overflow: auto;
+  white-space: nowrap;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  padding-bottom: 5px;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 2000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.modal-content {
+  position: relative;
+  margin: 0 auto;
+  padding: 0;
+  width: 80%;
+  max-width: 600px;
+  background: #000;
+  border-radius: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.close-modal {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 2500;
+}
+
+#modalVideo { width: 100%; border-radius: 8px; display: none; }
+#modalIframe { width: 100%; height: 337px; border-radius: 8px; display: none; }
+#modalImage { width: 100%; max-height: 80vh; object-fit: contain; border-radius: 8px; display: none; }
