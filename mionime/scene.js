@@ -73,6 +73,7 @@ async function useLensImage(selectedImageUrl) {
 
   detailContent.innerHTML = '';
   detailContent.style.display = 'none';
+  resultList.classList.remove('split-view');
   resultList.style.display = 'block';
   resultList.innerHTML = `
     <div style="padding:40px 20px; text-align:center; color:var(--text-muted);">
@@ -148,8 +149,11 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
   const resultList = document.getElementById('result-list');
   const lensSection = document.getElementById('google-lens-section');
   
-  if (!detailContent) return;
+  if (!detailContent || !resultList) return;
   if (lensSection) lensSection.style.display = 'none';
+
+  // Aktifkan Split View (50:50) saat item diklik
+  resultList.classList.add('split-view');
 
   const title = anilist.title || {};
   const coverImage = anilist.coverImage ? anilist.coverImage.large : 'https://via.placeholder.com/100?text=Poster';
@@ -177,7 +181,6 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
           const characterName = edge.node.name.full;
           const voiceActor = edge.voiceActors[0]?.name.full || 'Tidak diketahui';
           const characterImage = edge.node.image?.medium || 'https://via.placeholder.com/50?text=No+Image';
-          const vaImage = edge.voiceActors[0]?.image?.medium || 'https://via.placeholder.com/50?text=No+Image';
           return `<p>
             <img src="${characterImage}" alt="${characterName}" loading="lazy" class="clickable" data-fullsize="${characterImage}">
             <span style="font-size:12px;"><b>${characterName}</b><br><small style="color:var(--text-muted);"><i class="fa-solid fa-microphone"></i> ${voiceActor}</small></span>
@@ -279,12 +282,7 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
     });
   }
 
-  if (window.innerWidth <= 600) {
-    resultList.style.display = 'none';
-    detailContent.style.display = 'block';
-  } else {
-    detailContent.style.display = 'block';
-  }
+  detailContent.style.display = 'block';
   attachDetailEvents();
 }
 
@@ -359,7 +357,10 @@ function closeDetail() {
   const resultList = document.getElementById('result-list');
   const lensSection = document.getElementById('google-lens-section');
   if(detailContent) detailContent.style.display = 'none';
-  if(resultList) resultList.style.display = 'block';
+  if(resultList) {
+    resultList.style.display = 'block';
+    resultList.classList.remove('split-view');
+  }
   if (lensSection) lensSection.style.display = 'block';
   document.querySelectorAll('.result-item').forEach(item => item.classList.remove('active'));
 }
@@ -373,7 +374,10 @@ function closeResultBox() {
   const imageUrlInput = document.getElementById('image-url');
   
   if(resultBox) resultBox.style.display = 'none';
-  if(resultList) resultList.innerHTML = '';
+  if(resultList) {
+    resultList.innerHTML = '';
+    resultList.classList.remove('split-view');
+  }
   if(detailContent) { detailContent.innerHTML = ''; detailContent.style.display = 'none'; }
   if(fileInput) fileInput.value = '';
   if(imageUrlInput) imageUrlInput.value = '';
@@ -429,12 +433,14 @@ if (fileInputEl) {
 
     if(loading) loading.style.display = 'block';
     if(uploadIcon) uploadIcon.style.display = 'none';
-    if(resultList) resultList.innerHTML = '';
+    if(resultList) {
+      resultList.innerHTML = '';
+      resultList.classList.remove('split-view');
+    }
     if(detailContent) detailContent.innerHTML = '';
     moreInfoCache.clear();
     googleLensCache = null;
 
-    // Aktifkan Lock Button
     setBtnLoadingState(true, "Mengunggah...");
 
     try {
@@ -457,7 +463,6 @@ if (fileInputEl) {
       if(loading) loading.style.display = 'none';
       if(uploadIcon) uploadIcon.style.display = 'block';
       this.value = '';
-      // Lepaskan Lock Button
       setBtnLoadingState(false, "Cari");
     }
   });
@@ -501,11 +506,13 @@ async function performSearch(base64Image, imageUrl) {
   const uploadIcon = document.querySelector('.scene-upload-icon');
   const floatingFooter = document.getElementById('floating-footer');
 
-  if(resultList) resultList.innerHTML = '';
+  if(resultList) {
+    resultList.innerHTML = '';
+    resultList.classList.remove('split-view');
+  }
   if(detailContent) { detailContent.innerHTML = ''; detailContent.style.display = 'none'; }
   if(resultBox) resultBox.style.display = 'none';
 
-  // Aktifkan Lock Button (Mencegah Double Click)
   setBtnLoadingState(true, "Mencari...");
 
   try {
@@ -597,7 +604,6 @@ async function performSearch(base64Image, imageUrl) {
   } finally {
     if (loading) loading.style.display = 'none';
     if (uploadIcon) uploadIcon.style.display = 'block';
-    // Lepaskan Lock Button Setelah Selesai
     setBtnLoadingState(false, "Cari");
   }
 }
