@@ -51,8 +51,10 @@ async function useLensImage(selectedImageUrl) {
   detailContent.innerHTML = '';
   detailContent.style.display = 'none';
 
-  // Kembalikan tampilan mobile ke mode list
+  // Kembalikan tampilan ke mode list penuh (100%)
   resultList.style.display = 'block';
+  resultList.style.flex = '1 1 100%';
+  resultList.style.maxWidth = '100%';
 
   // Tampilkan loading
   resultList.innerHTML = `
@@ -65,7 +67,7 @@ async function useLensImage(selectedImageUrl) {
   `;
 
   resultBox.style.display = 'block';
-  resultBox.style.maxWidth = window.innerWidth <= 600 ? '500px' : '1100px';
+  resultBox.style.maxWidth = window.innerWidth <= 600 ? '500px' : '650px';
 
   try {
     // Jalankan pencarian ulang
@@ -344,15 +346,20 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
     });
   }
 
-  // Tampilkan detail sesuai ukuran layar
+  // Pengaturan Split View Otomatis (50% Kiri : 50% Kanan)
   if (window.innerWidth <= 600) {
     resultList.style.display = 'none';
     detailContent.style.display = 'block';
+    detailContent.style.maxWidth = '100%';
     searchResultBox.style.maxWidth = '500px';
   } else {
     detailContent.style.display = 'block';
-    searchResultBox.style.maxWidth = '1100px';
-    resultList.style.maxWidth = '550px';
+    searchResultBox.style.maxWidth = '1050px'; // Lebarkan kotak saat split terbuka
+    resultList.style.display = 'block';
+    resultList.style.flex = '1 1 50%';
+    resultList.style.maxWidth = '50%';
+    detailContent.style.flex = '1 1 50%';
+    detailContent.style.maxWidth = '50%';
   }
 
   // Scroll behavior
@@ -402,8 +409,6 @@ function attachDetailEvents() {
       this.style.display = 'none';
 
       const moreInfo = await fetchMoreInfo(anilistId);
-      // Refresh detail dengan data baru
-      // Catatan: Anda perlu menyimpan data result saat ini jika ingin refresh otomatis
       console.log('More info loaded for ID:', anilistId);
     });
   }
@@ -445,12 +450,16 @@ function closeDetail() {
 
   detailContent.style.display = 'none';
   resultList.style.display = 'block';
+  
   if (lensSection) {
-      lensSection.style.display = 'block';
-    }
+    lensSection.style.display = 'block';
+  }
+  
+  // Kembalikan ke mode list penuh (100%)
   if (window.innerWidth > 600) {
-    searchResultBox.style.maxWidth = '550px';
-    resultList.style.maxWidth = '550px';
+    searchResultBox.style.maxWidth = '650px';
+    resultList.style.flex = '1 1 100%';
+    resultList.style.maxWidth = '100%';
   }
   document.querySelectorAll('.result-item').forEach(item => item.classList.remove('active'));
 }
@@ -465,13 +474,15 @@ function closeResultBox() {
   
   resultBox.style.display = 'none';
   resultList.innerHTML = '';
+  resultList.style.flex = '1 1 100%';
+  resultList.style.maxWidth = '100%';
+  
   detailContent.innerHTML = '';
   detailContent.style.display = 'none';
   fileInput.value = '';
   imageUrlInput.value = '';
   floatingFooter.style.display = 'flex';
 
-  // Reset cache
   moreInfoCache.clear();
   googleLensCache = null;
   currentSearchImageUrl = null;
@@ -489,7 +500,7 @@ document.getElementById('file-short-anime').addEventListener('change', async fun
   const floatingFooter = document.getElementById('floating-footer');
 
   loading.style.display = 'block';
-  uploadIcon.style.display = 'none';
+  if (uploadIcon) uploadIcon.style.display = 'none';
   resultList.innerHTML = '';
   detailContent.innerHTML = '';
   moreInfoCache.clear();
@@ -517,7 +528,7 @@ document.getElementById('file-short-anime').addEventListener('change', async fun
     resultList.innerHTML = `<p class="error">Gagal mengunggah gambar: ${error.message}</p>`;
   } finally {
     loading.style.display = 'none';
-    uploadIcon.style.display = 'block';
+    if (uploadIcon) uploadIcon.style.display = 'block';
     this.value = '';
   }
 });
@@ -533,7 +544,7 @@ function triggerSceneUrlSearch() {
     const loading = document.getElementById('loading_file');
     const uploadIcon = document.querySelector('.upload-icon');
     loading.style.display = 'block';
-    uploadIcon.style.display = 'none';
+    if (uploadIcon) uploadIcon.style.display = 'none';
     moreInfoCache.clear();
     googleLensCache = null;
     performSearch(null, rawValue);
@@ -560,7 +571,11 @@ async function performSearch(base64Image, imageUrl) {
   detailContent.innerHTML = '';
   detailContent.style.display = 'none';
   resultBox.style.display = 'none';
-  resultBox.style.maxWidth = window.innerWidth > 600 ? '550px' : '500px';
+  
+  // Awal buka list: Lebar 100% rapi (tidak terbagi 50%)
+  resultBox.style.maxWidth = window.innerWidth > 600 ? '650px' : '500px';
+  resultList.style.flex = '1 1 100%';
+  resultList.style.maxWidth = '100%';
 
   try {
     const params = new URLSearchParams();
@@ -603,7 +618,7 @@ async function performSearch(base64Image, imageUrl) {
         `;
 
         resultList.innerHTML += `
-          <div class="result-item" data-id="${anilistId}" data-video="${result.video || ''}" data-filename="${result.filename || 'Tidak diketahui'}" data-from="${result.from}" data-to="${result.to}" data-anilist='${JSON.stringify(anilist).replace(/'/g, '&apos;')}' data-image="${result.image || ''}">
+          <div class="result-item" id="result-${anilistId}" data-id="${anilistId}" data-video="${result.video || ''}" data-filename="${result.filename || 'Tidak diketahui'}" data-from="${result.from}" data-to="${result.to}" data-anilist='${JSON.stringify(anilist).replace(/'/g, '&apos;')}' data-image="${result.image || ''}">
             <div class="summary-info">
               <div class="anime-title">${title.native || 'Tidak diketahui'}</div>
               <div class="anime-subtitle">${title.romaji || 'Tidak diketahui'}</div>
@@ -624,7 +639,6 @@ async function performSearch(base64Image, imageUrl) {
         floatingFooter.style.display = 'none';
       }, 100);
 
-      // Google Lens - Hanya fetch sekali
       if (imageUrl) {
         currentSearchImageUrl = imageUrl;
         if (!googleLensCache) {
@@ -632,7 +646,6 @@ async function performSearch(base64Image, imageUrl) {
             fetchGoogleLens(imageUrl);
           }, 800);
         } else {
-          // Tampilkan cache yang sudah ada
           setTimeout(() => {
             const lensSection = document.getElementById('google-lens-section');
             const lensContainer = document.getElementById('lens-results');
@@ -684,7 +697,6 @@ function attachResultEvents() {
   });
 }
 
-// Global click handler untuk modal
 document.addEventListener('click', function(e) {
   if (e.target.matches('.close-modal') || e.target.matches('.modal')) {
     const modal = document.getElementById('videoModal');
@@ -694,7 +706,9 @@ document.addEventListener('click', function(e) {
     const modalImage = document.getElementById('modalImage');
 
     modalVideo.pause();
-    modalVideo.querySelector('source').src = '';
+    if (modalVideo.querySelector('source')) {
+      modalVideo.querySelector('source').src = '';
+    }
     modalIframe.src = '';
     modalImage.src = '';
 
@@ -704,14 +718,12 @@ document.addEventListener('click', function(e) {
   }
 });
 
-// ================== CLOSE MODAL FUNCTION ==================
 function closeModal() {
   const modal = document.getElementById('videoModal');
   if (!modal) return;
 
   modal.style.display = 'none';
 
-  // Reset semua media
   const modalVideo = document.getElementById('modalVideo');
   const modalIframe = document.getElementById('modalIframe');
   const modalImage = document.getElementById('modalImage');
@@ -735,7 +747,6 @@ function closeModal() {
     modalImage.src = '';
   }
 
-  // Kembalikan search result box jika ada hasil
   const resultBox = document.getElementById('search-result-box');
   const resultList = document.getElementById('result-list');
   
@@ -744,14 +755,12 @@ function closeModal() {
   }
 }
 
-// Optional: Tambahkan juga event listener backup (sudah ada tapi lebih aman)
 document.addEventListener('click', function(e) {
   if (e.target.matches('.close-modal') || e.target.matches('.modal')) {
     closeModal();
   }
 });
 
-// ================== TOGGLE MODE WELCOME <-> SCENE ==================
 let sceneUserInteracted = false;
 let sceneAutoTimer = null;
 let currentWelcomeMode = 'welcome';
@@ -775,12 +784,10 @@ document.addEventListener('DOMContentLoaded', function() {
   const panelScene = document.getElementById('welcomeModeScene');
   if (!panelScene) return;
 
-  // Auto ganti mode tiap 5 detik selama user belum berinteraksi
   sceneAutoTimer = setInterval(function() {
     if (!sceneUserInteracted) toggleWelcomeSceneMode(false);
   }, 5000);
 
-  // Interaksi apa pun di panel scene = pertahankan mode (stop auto switch)
   ['focusin', 'click', 'change', 'paste', 'input'].forEach(function(evt) {
     panelScene.addEventListener(evt, lockSceneAutoSwitch);
   });
