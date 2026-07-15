@@ -102,11 +102,9 @@ function toggleBodyScrollLock(locked) {
     document.body.dataset.scrollLocked = '1';
     document.body.dataset.prevOverflow = document.body.style.overflow || '';
     document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
   } else {
     if (!document.body.dataset.scrollLocked) return;
     document.body.style.overflow = document.body.dataset.prevOverflow || '';
-    document.body.style.touchAction = '';
     delete document.body.dataset.scrollLocked;
     delete document.body.dataset.prevOverflow;
   }
