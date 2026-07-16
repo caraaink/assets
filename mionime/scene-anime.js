@@ -34,7 +34,7 @@ if (!document.getElementById('search-result-box')) {
     <span class="close-modal" onclick="closeModal()">&times;</span>
     <div id="modalContent">
       <video id="modalVideo" controls><source src="" type="video/mp4">Browser kamu tidak mendukung video.</video>
-      <iframe id="modalIframe" frameborder="0" allowfullscreen sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      <iframe id="modalIframe" frameborder="0" allowfullscreen allow="autoplay; fullscreen; encrypted-media" sandbox="allow-scripts allow-same-origin allow-presentation allow-popups" referrerpolicy="strict-origin-when-cross-origin"></iframe>
       <img id="modalImage" src="" alt="Full-size image">
     </div>
   </div>
@@ -65,33 +65,74 @@ function resetResultScroll() {
   });
 }
 
-function lockOverscrollChaining(el) {
-  if (!el || el.dataset.overscrollLocked) return;
-  el.dataset.overscrollLocked = '1';
+// Satu handler di box terluar: cek dari elemen yang disentuh ke atas,
+// apakah ada kontainer scrollable yang masih bisa bergerak di arah gesture.
+// Kalau ada -> biarkan browser scroll normal. Kalau semua mentok -> blokir
+// supaya scroll tidak tembus ke halaman belakang (homepage).
+function lockOverscrollChaining(box) {
+  if (!box || box.dataset.overscrollLocked) return;
+  box.dataset.overscrollLocked = '1';
 
-  let startY = 0;
-  el.addEventListener('touchstart', function(e) {
-    if (e.touches && e.touches.length) startY = e.touches[0].clientY;
+  let lastY = 0;
+  let lastX = 0;
+
+  function canScrollInDirection(el, deltaY) {
+    // deltaY > 0 = jari geser ke bawah = konten mau scroll ke atas
+    if (el.scrollHeight <= el.clientHeight + 1) return false; // tidak overflow
+    const style = window.getComputedStyle(el);
+    if (!/(auto|scroll)/.test(style.overflowY)) return false;
+    if (deltaY > 0) return el.scrollTop > 0;                                        // masih bisa naik
+    if (deltaY < 0) return Math.ceil(el.scrollTop + el.clientHeight) < el.scrollHeight; // masih bisa turun
+    return false;
+  }
+
+  function canScrollHorizontally(el, deltaX) {
+    // deltaX > 0 = jari geser ke kanan = konten mau scroll ke kiri
+    if (el.scrollWidth <= el.clientWidth + 1) return false;
+    const style = window.getComputedStyle(el);
+    if (!/(auto|scroll)/.test(style.overflowX)) return false;
+    if (deltaX > 0) return el.scrollLeft > 0;
+    if (deltaX < 0) return Math.ceil(el.scrollLeft + el.clientWidth) < el.scrollWidth;
+    return false;
+  }
+
+  box.addEventListener('touchstart', function(e) {
+    if (e.touches && e.touches.length) {
+      lastY = e.touches[0].clientY;
+      lastX = e.touches[0].clientX;
+    }
   }, { passive: true });
 
-  el.addEventListener('touchmove', function(e) {
+  box.addEventListener('touchmove', function(e) {
     if (!e.touches || !e.touches.length) return;
     const currentY = e.touches[0].clientY;
-    const deltaY = currentY - startY; // > 0 = jari geser ke bawah (mau scroll ke atas)
+    const currentX = e.touches[0].clientX;
+    const deltaY = currentY - lastY;
+    const deltaX = currentX - lastX;
+    lastY = currentY;
+    lastX = currentX;
+    if (deltaY === 0 && deltaX === 0) return;
 
-    const atTop = el.scrollTop <= 0;
-    const atBottom = Math.ceil(el.scrollTop + el.clientHeight) >= el.scrollHeight;
+    const horizontalDominant = Math.abs(deltaX) > Math.abs(deltaY);
 
-    if ((atTop && deltaY > 0) || (atBottom && deltaY < 0)) {
-      e.preventDefault();
+    // Cari dari target sentuhan ke atas sampai box: adakah yang masih bisa scroll?
+    let node = e.target;
+    while (node && node !== box.parentNode) {
+      if (node.nodeType === 1) {
+        if (horizontalDominant && canScrollHorizontally(node, deltaX)) return; // scroll horizontal (mis. lens)
+        if (!horizontalDominant && canScrollInDirection(node, deltaY)) return; // scroll vertikal
+      }
+      if (node === box) break;
+      node = node.parentNode;
     }
+
+    // Semua kontainer mentok -> blokir agar tidak chaining ke homepage
+    if (e.cancelable) e.preventDefault();
   }, { passive: false });
 }
 
 function lockScrollableContainers() {
-  ['search-result-content', 'result-list', 'detail-content'].forEach(function(elId) {
-    lockOverscrollChaining(document.getElementById(elId));
-  });
+  lockOverscrollChaining(document.getElementById('search-result-box'));
 }
 
 // Kunci scroll halaman belakang (homepage) selama box hasil pencarian terbuka,
@@ -112,17 +153,24 @@ function toggleBodyScrollLock(locked) {
 
 function observeResultBoxVisibility() {
   const resultBox = document.getElementById('search-result-box');
+  const videoModal = document.getElementById('videoModal');
   if (!resultBox || resultBox.dataset.scrollLockObserved) return;
   resultBox.dataset.scrollLockObserved = '1';
 
+  const isVisible = function(el) {
+    return el && window.getComputedStyle(el).display !== 'none';
+  };
   const applyLock = function() {
-    const isOpen = window.getComputedStyle(resultBox).display !== 'none';
-    toggleBodyScrollLock(isOpen);
+    // Kunci scroll homepage selama result box ATAU modal video terbuka
+    toggleBodyScrollLock(isVisible(resultBox) || isVisible(videoModal));
   };
   applyLock();
 
   const observer = new MutationObserver(applyLock);
   observer.observe(resultBox, { attributes: true, attributeFilter: ['style'] });
+  if (videoModal) {
+    observer.observe(videoModal, { attributes: true, attributeFilter: ['style'] });
+  }
 }
 observeResultBoxVisibility();
 
@@ -183,6 +231,15 @@ async function useLensImage(selectedImageUrl) {
   // (tanda ikut tersimpan dan tetap ada setelah HTML di-restore)
   highlightLensSelection(selectedImageUrl);
   const oldLensHTML = lensResults ? lensResults.innerHTML : '';
+  const oldLensScrollLeft = lensResults ? lensResults.scrollLeft : 0;
+
+  // Kunci posisi ATAS box (bukan tingginya): selama loading, bagian bawah
+  // boleh menyusut mengikuti spinner, tapi tepi atas & grid lens diam di tempat
+  if (resultBox.offsetHeight > 0) {
+    const boxTop = resultBox.getBoundingClientRect().top;
+    resultBox.style.top = boxTop + 'px';
+    resultBox.style.transform = 'translateX(-50%)';
+  }
 
   // Reset detail sepenuhnya
   detailContent.innerHTML = '';
@@ -208,16 +265,32 @@ async function useLensImage(selectedImageUrl) {
     // Jalankan pencarian ulang
     await performSearch(null, selectedImageUrl, true);
 
-    // Setelah search selesai, pastikan Lens tetap muncul
+    // Setelah search selesai: JANGAN tulis ulang grid lens kalau masih ada isinya —
+    // DOM dibiarkan utuh sehingga posisi scroll & highlight terkunci natural
+    // (tanpa reset/koreksi = tanpa flash). Tulis ulang hanya sebagai fallback.
     if (oldLensHTML && lensSection && lensResults) {
       setTimeout(() => {
         lensSection.style.display = 'block';
-        lensResults.innerHTML = oldLensHTML;
+        if (!lensResults.innerHTML.trim()) {
+          lensResults.innerHTML = oldLensHTML;
+          lensResults.scrollLeft = oldLensScrollLeft;
+          requestAnimationFrame(() => {
+            const selected = lensResults.querySelector('img.lens-selected');
+            if (selected) selected.scrollIntoView({ block: 'nearest', inline: 'center' });
+            else lensResults.scrollLeft = oldLensScrollLeft;
+          });
+        }
       }, 400);
     }
   } catch (err) {
     console.error('Lens search failed:', err);
     resultList.innerHTML = `<p style="color:red; padding:20px; text-align:center;">Gagal melakukan pencarian.<br>${err.message}</p>`;
+  } finally {
+    // Kembalikan posisi box ke mode center normal setelah data konten tampil
+    setTimeout(() => {
+      resultBox.style.top = '';
+      resultBox.style.transform = '';
+    }, 450);
   }
 }
 
@@ -367,7 +440,7 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
       lensSection.style.display = 'none';   // Sembunyikan Google Lens saat buka detail
     }
   const title = anilist.title || {};
-  const coverImage = anilist.coverImage ? anilist.coverImage.large : 'https://via.placeholder.com/100?text=Poster';
+  const coverImage = anilist.coverImage ? anilist.coverImage.large : 'https://placehold.co/100?text=Poster';
 
   let moreInfo = moreInfoCache.get(anilist.id.toString()) || anilist.moreInfo || null;
   let moreInfoHTML = '';
@@ -387,8 +460,8 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
       ? moreInfo.characters.edges.map(edge => {
           const characterName = escapeHtml(edge.node.name.full);
           const voiceActor = escapeHtml(edge.voiceActors[0]?.name.full || 'Tidak diketahui');
-          const characterImage = escapeHtml(edge.node.image?.medium || 'https://via.placeholder.com/50?text=No+Image');
-          const vaImage = escapeHtml(edge.voiceActors[0]?.image?.medium || 'https://via.placeholder.com/50?text=No+Image');
+          const characterImage = escapeHtml(edge.node.image?.medium || 'https://placehold.co/50?text=No+Image');
+          const vaImage = escapeHtml(edge.voiceActors[0]?.image?.medium || 'https://placehold.co/50?text=No+Image');
           return `<p>
             <img src="${characterImage}" alt="${characterName}" loading="lazy" width="50" height="50" class="clickable" data-fullsize="${characterImage}">
             <strong>${characterName}</strong>
@@ -446,7 +519,7 @@ async function showDetail(id, videoUrl, filename, from, to, anilist, imageUrl, i
           ${videoUrl ? `
             <div class="video-wrapper">
               <div class="detail-preview clickable">
-                <img src="${escapeHtml(imageUrl) || 'https://via.placeholder.com/300x169?text=Video'}" alt="preview" data-original="${escapeHtml(videoUrl)}">
+                <img src="${escapeHtml(imageUrl) || 'https://placehold.co/300x169?text=Video'}" alt="preview" data-original="${escapeHtml(videoUrl)}">
                 <span class="play-icon">▶︎</span>
               </div>
             </div>
@@ -601,6 +674,8 @@ function openModalVideo(src) {
   modalVideo.load();
   document.getElementById('search-result-box').style.display = 'none';
   modal.style.display = 'flex';
+  const playPromise = modalVideo.play();
+  if (playPromise && playPromise.catch) playPromise.catch(function() {});
 }
 
 function openModalIframe(src) {
@@ -611,7 +686,7 @@ function openModalIframe(src) {
   const modal = document.getElementById('videoModal');
   const modalIframe = document.getElementById('modalIframe');
   modalIframe.style.display = 'block';
-  modalIframe.src = src;
+  modalIframe.src = src + (src.indexOf('?') !== -1 ? '&' : '?') + 'autoplay=1';
   document.getElementById('search-result-box').style.display = 'none';
   modal.style.display = 'flex';
 }
@@ -789,7 +864,7 @@ async function performSearch(base64Image, imageUrl, keepOpen) {
 
         const previewDivHTML = `
           <div class="preview-media ${hasVideo ? 'clickable' : ''}">
-            <img src="${escapeHtml(result.image) || 'https://via.placeholder.com/100?text=Video'}" height="100" width="100" alt="preview" loading="lazy" ${hasVideo ? `data-original="${escapeHtml(result.video)}"` : ''}>
+            <img src="${escapeHtml(result.image) || 'https://placehold.co/100?text=Video'}" height="100" width="100" alt="preview" loading="lazy" ${hasVideo ? `data-original="${escapeHtml(result.video)}"` : ''}>
             ${hasVideo ? '<span class="play-icon">▶︎</span>' : ''}
           </div>
         `;
@@ -831,7 +906,11 @@ async function performSearch(base64Image, imageUrl, keepOpen) {
             const lensSection = document.getElementById('google-lens-section');
             const lensContainer = document.getElementById('lens-results');
             lensSection.style.display = 'block';
-            lensContainer.innerHTML = googleLensCache;
+            // Tulis ulang HANYA jika grid kosong; kalau masih ada isinya,
+            // biarkan DOM apa adanya agar posisi scroll & highlight tidak ter-reset
+            if (!lensContainer.innerHTML.trim()) {
+              lensContainer.innerHTML = googleLensCache;
+            }
           }, 300);
         }
       }
