@@ -26,7 +26,7 @@ button#search-anime-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 .close-btn{background:none;border:none;color:var(--text-muted);font-size:16px;cursor:pointer;transition:color .2s}
 .close-btn:hover{color:var(--primary)}
 .lens-section{display:none;flex-shrink:0;padding:12px 15px 10px;border-bottom:1px solid var(--border)}
-.lens-results{overflow:auto;white-space:nowrap;-ms-overflow-style:none;scrollbar-width:none;padding-bottom:5px;overscroll-behavior:contain}
+.lens-results{overflow:auto;white-space:nowrap;-ms-overflow-style:none;scrollbar-width:none;padding-bottom:5px;overscroll-behavior:contain;touch-action:pan-x}
 #lens-results img{transition:outline-color .2s,opacity .2s}
 #lens-results img.lens-selected{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
 #search-result-content{flex:1 1 auto;min-height:0;padding:10px 15px;overflow-y:auto;box-sizing:border-box;scrollbar-width:thin;scrollbar-color:#555 var(--bg-body);overflow-anchor:none;overscroll-behavior:contain}
@@ -94,7 +94,7 @@ button#search-anime-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 .loading-dots::after{content:'';display:inline-block;width:20px;text-align:left;animation:dots 1.5s steps(5,end) infinite}
 @keyframes dots{0%{content:''}20%{content:'.'}40%{content:'..'}60%{content:'...'}80%{content:'....'}100%{content:''}}
 /* ---- Modal ---- */
-.modal{display:none;position:fixed;z-index:2000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.75);align-items:center;justify-content:center}
+.modal{display:none;position:fixed;z-index:2000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.75);align-items:center;justify-content:center;overscroll-behavior:contain}
 .modal-content{position:relative;margin:0 auto;padding:0;width:80%;max-width:600px;background:#000;border-radius:8px}
 .close-modal{position:absolute;top:10px;right:15px;color:#fff;font-size:24px;cursor:pointer;z-index:2500}
 #modalVideo{width:100%;aspect-ratio:16/9;background:#000;border-radius:8px;display:none}
@@ -107,9 +107,9 @@ button#search-anime-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
 button#search-anime-btn{padding:8px 12px;font-size:12px}
 .preview-media img,.trailer-link img{height:80px;width:80px}
 .anime-title{font-size:.88em}
-#search-result-content{display:block}
-#result-list{max-width:100%;max-height:calc(80vh - 50px);overflow-y:auto;overscroll-behavior:contain}
-#detail-content{display:none;padding-left:5px;padding-right:5px;overflow-y:auto;max-height:calc(80vh - 50px)}
+#search-result-content{display:flex;flex-direction:column;overflow:hidden}
+#result-list{max-width:100%}
+#detail-content{display:none;max-width:100%;padding-left:5px;padding-right:5px}
 .summary-info{width:calc(100% - 100px)}
 .poster-frame{width:80px}
 .character-list p{grid-template-columns:50px 1fr 1fr}
