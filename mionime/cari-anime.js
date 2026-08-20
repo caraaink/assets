@@ -181,7 +181,7 @@ async function fetchGoogleLens(imageUrl) {
   lensSection.style.display = 'block';
   lensContainer.innerHTML = '<div style="padding:10px; color:var(--text-muted); font-size:13px;">Memuat gambar serupa...</div>';
 
-  const SEARCH_URL = atob("aHR0cHM6Ly9hcGkubWVvd25pbWUubmV0L3NlYXJjaA==");
+  const SEARCH_URL = atob("aHR0cHM6Ly9hcGkubWlvbmltZS5jb20vc2VhcmNo");
   try {
     const response = await fetch(SEARCH_URL, {
       method: 'POST',
@@ -396,7 +396,7 @@ async function fetchMoreInfo(anilistId, retries = 2, backoff = 1000) {
   const variables = { id: parseInt(anilistId) };
 
   try {
-    const response = await fetch(atob("aHR0cHM6Ly9hcGkubWVvd25pbWUubmV0L2FwaS9hbmlsaXN0"), {
+    const response = await fetch(atob("aHR0cHM6Ly9hcGkubWlvbmltZS5jb20vYXBpL2FuaWxpc3Q="), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -835,7 +835,7 @@ async function performSearch(base64Image, imageUrl, keepOpen) {
     params.append('anilistInfo', 1);
     params.append('cutBorders', 1);
 
-    const TRACE_URL = atob("aHR0cHM6Ly9hcGkubWVvd25pbWUubmV0L2FwaS90cmFjZQ==");
+    const TRACE_URL = atob("aHR0cHM6Ly9hcGkubWlvbmltZS5jb20vYXBpL3RyYWNl");
     const response = await fetch(`${TRACE_URL}?${params.toString()}`, { method: 'GET' });
 
     if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
